@@ -6,7 +6,7 @@ from google import genai
 from langchain_huggingface import HuggingFaceEmbeddings
 
 
-GEMINI_API_KEY = "AIzaSyDzFepnVv0n1kJhcKCOTNke2BKPBvvyDHg"
+GEMINI_API_KEY = "Your Gemini API Key"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 EMBEDDING_MODEL_NAME = "BAAI/bge-base-en-v1.5"
