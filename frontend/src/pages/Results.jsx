@@ -9,14 +9,15 @@ function Results() {
 
   const from = params.get("from") || "NYC";
   const to = params.get("to") || "LAX";
-  const date = params.get("date") || "2026-06-15";
+  const date = params.get("date") || "";
   const returnDate = params.get("returnDate") || "";
   const maxPrice = params.get("maxPrice") || "";
   const maxStops = params.get("maxStops") || "";
   const maxLayover = params.get("maxLayover") || "";
   const sortBy = params.get("sortBy") || "price";
 
-  const [flights, setFlights] = useState([]);
+  const [outboundFlights, setOutboundFlights] = useState([]);
+  const [returnFlights, setReturnFlights] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
@@ -63,19 +64,23 @@ function Results() {
         const response = await fetch(
           `${API_BASE}/flights?from=${encodeURIComponent(
             from
-          )}&to=${encodeURIComponent(to)}&date=${encodeURIComponent(date)}`
+          )}&to=${encodeURIComponent(to)}&date=${encodeURIComponent(
+            date
+          )}&returnDate=${encodeURIComponent(returnDate)}`
         );
 
         const data = await response.json();
 
         if (!response.ok) {
-          setFlights(data.fallback || []);
+          setOutboundFlights(data.outbound_flights || data.fallback || []);
+          setReturnFlights(data.return_flights || []);
           setUsingFallback(true);
           setError(data.error || "Request failed.");
           return;
         }
 
-        setFlights(data.flights || data.fallback || []);
+        setOutboundFlights(data.outbound_flights || data.fallback || []);
+        setReturnFlights(data.return_flights || []);
         setUsingFallback(Boolean(data.fallback_used));
         setInfoMessage(data.message || "");
       } catch (err) {
@@ -86,14 +91,11 @@ function Results() {
     };
 
     searchFlights();
-  }, [from, to, date]);
+  }, [from, to, date, returnDate]);
 
   const cleanBotText = (text) => {
     if (!text) return "";
-    return text
-      .replace(/\*\*/g, "")
-      .replace(/\r/g, "")
-      .trim();
+    return text.replace(/\*\*/g, "").replace(/\r/g, "").trim();
   };
 
   const renderBotMessage = (text) => {
@@ -128,11 +130,13 @@ function Results() {
             <p className="bot-section-text">{firstLine}</p>
           )}
 
-          {lines.slice(isHeading ? 1 : 1).map((line, i) => {
+          {lines.slice(1).map((line, i) => {
             const bulletLine = line.replace(/^[-•]\s*/, "");
             return (
               <p key={i} className="bot-section-text">
-                {line.startsWith("-") || line.startsWith("•") ? `• ${bulletLine}` : line}
+                {line.startsWith("-") || line.startsWith("•")
+                  ? `• ${bulletLine}`
+                  : line}
               </p>
             );
           })}
@@ -174,7 +178,7 @@ function Results() {
   const getNumericPrice = (p) =>
     parseFloat(String(p).replace(/[^0-9.]/g, "")) || 0;
 
-  const filteredAndSortedFlights = useMemo(() => {
+  const filterAndSortFlights = (flights) => {
     let result = [...flights];
 
     if (maxPrice !== "") {
@@ -206,7 +210,34 @@ function Results() {
     }
 
     return result;
-  }, [flights, maxPrice, maxStops, maxLayover, sortBy]);
+  };
+
+  const filteredOutboundFlights = useMemo(
+    () => filterAndSortFlights(outboundFlights),
+    [outboundFlights, maxPrice, maxStops, maxLayover, sortBy]
+  );
+
+  const filteredReturnFlights = useMemo(
+    () => filterAndSortFlights(returnFlights),
+    [returnFlights, maxPrice, maxStops, maxLayover, sortBy]
+  );
+
+  const renderFlightCard = (flight, index) => (
+    <div key={index} className="flight-card">
+      <div className="flight-header">
+        <h3>{flight.airline}</h3>
+        <h3>{flight.price}</h3>
+      </div>
+      <p>
+        {flight.origin} → {flight.destination}
+      </p>
+      <p>Departure: {formatTime(flight.departureTime)}</p>
+      <p>Arrival: {formatTime(flight.arrivalTime)}</p>
+      <p>Stops: {flight.stopCount}</p>
+      <p>Layover: {flight.layoverMinutes} mins</p>
+      <p>Duration: {flight.durationMinutes} mins</p>
+    </div>
+  );
 
   return (
     <div className="results-shell">
@@ -238,9 +269,7 @@ function Results() {
             />
             <div className="destination-preview-content">
               <h3>{normalizedDestination}</h3>
-              <p>
-                <strong>Destination Preview</strong>
-              </p>
+              <p><strong>Destination Preview</strong></p>
             </div>
           </div>
         </section>
@@ -252,33 +281,28 @@ function Results() {
           </p>
         )}
 
-        <h2>Available Flights</h2>
-
+        <h2>Outbound Flights</h2>
         {loading ? (
           <p className="center-text">Searching flights...</p>
-        ) : (
+        ) : filteredOutboundFlights.length > 0 ? (
           <div className="results-list">
-            {filteredAndSortedFlights.length > 0 ? (
-              filteredAndSortedFlights.map((flight, index) => (
-                <div key={index} className="flight-card">
-                  <div className="flight-header">
-                    <h3>{flight.airline}</h3>
-                    <h3>{flight.price}</h3>
-                  </div>
-                  <p>
-                    {flight.origin} → {flight.destination}
-                  </p>
-                  <p>Departure: {formatTime(flight.departureTime)}</p>
-                  <p>Arrival: {formatTime(flight.arrivalTime)}</p>
-                  <p>Stops: {flight.stopCount}</p>
-                  <p>Layover: {flight.layoverMinutes} mins</p>
-                  <p>Duration: {flight.durationMinutes} mins</p>
-                </div>
-              ))
-            ) : (
-              <p className="center-text">No flights found.</p>
-            )}
+            {filteredOutboundFlights.map(renderFlightCard)}
           </div>
+        ) : (
+          <p className="center-text">No outbound flights found.</p>
+        )}
+
+        {returnDate && (
+          <>
+            <h2>Return Flights</h2>
+            {filteredReturnFlights.length > 0 ? (
+              <div className="results-list">
+                {filteredReturnFlights.map(renderFlightCard)}
+              </div>
+            ) : (
+              <p className="center-text">No return flights found.</p>
+            )}
+          </>
         )}
       </div>
 

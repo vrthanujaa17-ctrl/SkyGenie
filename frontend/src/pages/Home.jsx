@@ -19,21 +19,27 @@ function Home() {
         to
       )}&date=${encodeURIComponent(
         departureDate
-      )}&returnDate=${encodeURIComponent(returnDate)}`
+      )}&returnDate=${encodeURIComponent(
+        returnDate
+      )}&maxPrice=${encodeURIComponent(
+        maxPrice
+      )}&maxStops=${encodeURIComponent(
+        maxStops
+      )}&maxLayover=${encodeURIComponent(
+        maxLayover
+      )}&sortBy=${encodeURIComponent(sortBy)}`
     );
   };
 
   return (
     <div className="home-bg">
       <div className="container">
-        <h1>✈️ SKY GENIE </h1>
+        <h1>✈️ SkyGenie</h1>
         <p className="subtitle">
-           Your smart travel companion for finding the best flights ✨ 
+          Your smart travel companion for finding the best flights✨
         </p>
 
-        {/* ✨ MAIN SEARCH ROW */}
         <div className="search-box">
-
           <div className="input-group">
             <label>From</label>
             <input
@@ -73,9 +79,7 @@ function Home() {
           <button onClick={handleSearch}>Search Flights</button>
         </div>
 
-        {/* ✨ FILTER ROW */}
         <div className="search-box">
-
           <div className="input-group">
             <label>Max Price</label>
             <input
@@ -113,7 +117,6 @@ function Home() {
               <option value="duration">Sort by Duration</option>
             </select>
           </div>
-
         </div>
       </div>
     </div>
